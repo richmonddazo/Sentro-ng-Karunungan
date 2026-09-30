@@ -1,2 +1,7 @@
-node_modules/
-.env
+/config/database.local.php
+/uploads/covers/*
+!/uploads/covers/.gitkeep
+.DS_Store
+Thumbs.db
+/config/mail.php
+/vendor/
