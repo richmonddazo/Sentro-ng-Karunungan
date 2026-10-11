@@ -270,7 +270,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <a href="<?= e(url('admin/books.php')) ?>">
             Books
         </a>
+        <a href="<?= e(url('admin/reports.php')) ?>">
+            Reports
+        </a>
 
+        <a href="<?= e(url('admin/audit-logs.php')) ?>">
+            Activity Logs
+        </a>
         <span>
             <?= e($user['name']) ?>
         </span>

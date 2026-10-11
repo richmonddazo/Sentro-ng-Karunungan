@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../includes/bootstrap.php';
+require_once __DIR__ . '/../includes/notifications.php';
 
 require_login();
 
@@ -9,6 +10,10 @@ if (is_admin()) {
 }
 
 $user = current_user();
+$unreadNotifications =
+    unread_notification_count(
+        (int)$user['id']
+    );
 $pdo = db();
 
 
@@ -518,16 +523,42 @@ $newArrivals = $newArrivalsStmt->fetchAll();
     <nav>
 
         <a href="<?= e(url('user/dashboard.php')) ?>">
-            Dashboard
-        </a>
+    Dashboard
+</a>
 
-        <a href="<?= e(url('user/catalog.php')) ?>">
-            Browse Books
-        </a>
+<a href="<?= e(url('user/catalog.php')) ?>">
+    Books
+</a>
 
-        <a href="<?= e(url('user/reservations.php')) ?>">
-            My Reservations
-        </a>
+<a href="<?= e(url('user/reservations.php')) ?>">
+    My Reservations
+</a>
+
+
+<!-- NOTIFICATION BELL -->
+
+        <a
+    href="<?= e(url('user/notifications.php')) ?>"
+    class="notification-bell"
+    title="Notifications"
+>
+    <span class="notification-icon">
+        🔔
+    </span>
+
+    <?php if ($unreadNotifications > 0): ?>
+
+        <span class="notification-badge">
+
+            <?= $unreadNotifications > 99
+                ? '99+'
+                : $unreadNotifications
+            ?>
+
+        </span>
+
+    <?php endif; ?>
+</a>
 
         <span>
             <?= e($user['name']) ?>

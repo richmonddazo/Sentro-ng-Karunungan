@@ -14,6 +14,8 @@ $allowedFilters = [
     'approved',
     'ready',
     'borrowed',
+    'due_soon',
+    'overdue',
     'returned',
     'rejected',
     'cancelled',
@@ -42,6 +44,22 @@ $statsStmt = db()->query("
         SUM(status = 'ready') AS ready,
 
         SUM(status = 'borrowed') AS borrowed,
+
+        SUM(
+            status = 'borrowed'
+            AND due_at IS NOT NULL
+            AND due_at > NOW()
+            AND due_at <= DATE_ADD(
+                NOW(),
+                INTERVAL 1 DAY
+            )
+        ) AS due_soon,
+
+        SUM(
+            status = 'borrowed'
+            AND due_at IS NOT NULL
+            AND due_at < NOW()
+        ) AS overdue,
 
         SUM(status = 'returned') AS returned
 
@@ -97,7 +115,27 @@ $sql = "
 
 $params = [];
 
-if ($statusFilter !== 'all') {
+if ($statusFilter === 'overdue') {
+
+    $sql .= "
+        WHERE reservations.status = 'borrowed'
+          AND reservations.due_at IS NOT NULL
+          AND reservations.due_at < NOW()
+    ";
+
+} elseif ($statusFilter === 'due_soon') {
+
+    $sql .= "
+        WHERE reservations.status = 'borrowed'
+          AND reservations.due_at IS NOT NULL
+          AND reservations.due_at > NOW()
+          AND reservations.due_at <= DATE_ADD(
+              NOW(),
+              INTERVAL 1 DAY
+          )
+    ";
+
+} elseif ($statusFilter !== 'all') {
 
     $sql .= "
         WHERE reservations.status = ?
@@ -243,6 +281,21 @@ function admin_reservation_status(string $status): array
             Reservations
         </a>
 
+        <a href="<?= e(url('admin/users.php')) ?>">
+            Users
+        </a>
+
+        <a href="<?= e(url('admin/inventory.php')) ?>">
+    Inventory
+        </a>
+
+        <a href="<?= e(url('admin/reports.php')) ?>">
+            Reports
+        </a>
+
+        <a href="<?= e(url('admin/audit-logs.php')) ?>">
+            Activity Logs
+        </a>
         <span>
             <?= e($user['name']) ?>
         </span>
@@ -373,6 +426,43 @@ function admin_reservation_status(string $status): array
 
         </div>
 
+    <div class="card">
+
+    <div
+        style="
+            font-size:28px;
+            font-weight:800;
+            color:#b26a00;
+        "
+    >
+        <?= (int)$stats['due_soon'] ?>
+    </div>
+
+    <div class="muted">
+        Due Soon
+    </div>
+
+</div>
+
+        <div class="card">
+
+
+    <div
+        style="
+            font-size:28px;
+            font-weight:800;
+            color:#b42318;
+        "
+    >
+        <?= (int)$stats['overdue'] ?>
+    </div>
+
+    <div class="muted">
+        Overdue
+    </div>
+
+</div>
+
 
         <div class="card">
 
@@ -481,19 +571,49 @@ function admin_reservation_status(string $status): array
             "
         >
 
-
         <?php foreach ($reservations as $reservation): ?>
 
+    <?php
 
-            <?php
+    $status =
+        admin_reservation_status(
+            $reservation['status']
+        );
 
-            $status =
-                admin_reservation_status(
-                    $reservation['status']
-                );
+    $isOverdue =
+        $reservation['status'] === 'borrowed'
+        &&
+        !empty($reservation['due_at'])
+        &&
+        strtotime($reservation['due_at']) < time();
 
-            ?>
+    $isDueSoon =
+        $reservation['status'] === 'borrowed'
+        &&
+        !empty($reservation['due_at'])
+        &&
+        strtotime($reservation['due_at']) > time()
+        &&
+        strtotime($reservation['due_at']) <= time() + 86400;
 
+    if ($isOverdue) {
+
+        $status = [
+            'label' => 'Overdue',
+            'background' => '#fff0f0',
+            'color' => '#b42318'
+        ];
+
+    } elseif ($isDueSoon) {
+
+        $status = [
+            'label' => 'Due Soon',
+            'background' => '#fff7df',
+            'color' => '#9a6500'
+        ];
+    }
+
+    ?>
 
             <article class="card">
 
@@ -1022,52 +1142,45 @@ function admin_reservation_status(string $status): array
 
         <?php endif; ?>
 
-
         <?php if ($reservation['due_at']): ?>
 
-            <?php
+    <p
+        style="
+            color:
+                <?= $isOverdue
+                    ? '#a52a2a'
+                    : ($isDueSoon ? '#9a6500' : '#5135a5')
+                ?>;
+        "
+    >
 
-            $isOverdue =
-                strtotime($reservation['due_at']) <
-                time();
+        Due:
+        <br>
 
-            ?>
+        <strong>
+            <?= date(
+                'M d, Y h:i A',
+                strtotime(
+                    $reservation['due_at']
+                )
+            ) ?>
+        </strong>
 
-            <p
-                style="
-                    color:
-                        <?= $isOverdue
-                            ? '#a52a2a'
-                            : '#5135a5'
-                        ?>;
-                "
-            >
+        <?php if ($isOverdue): ?>
 
-                Due:
-                <br>
+            <br>
+            <strong>OVERDUE</strong>
 
-                <strong>
+        <?php elseif ($isDueSoon): ?>
 
-                    <?= date(
-                        'M d, Y h:i A',
-                        strtotime(
-                            $reservation['due_at']
-                        )
-                    ) ?>
-
-                </strong>
-
-                <?php if ($isOverdue): ?>
-
-                    <br>
-                    OVERDUE
-
-                <?php endif; ?>
-
-            </p>
+            <br>
+            <strong>DUE SOON</strong>
 
         <?php endif; ?>
 
+    </p>
+
+<?php endif; ?>
 
         <form
             method="POST"
@@ -1168,31 +1281,27 @@ function admin_reservation_status(string $status): array
         </p>
 
 
-    <?php elseif (
-        $reservation['status'] === 'expired'
-    ): ?>
+   <?php elseif (
+    $reservation['status'] === 'expired'
+): ?>
 
-        <h4 style="margin-top:0;">
-            Reservation Expired
-        </h4>
+    <h4 style="margin-top:0;">
+        Reservation Expired
+    </h4>
 
-        <p class="muted">
-            The pickup period has expired.
-        </p>
+    <p class="muted">
+        The pickup period has expired.
+    </p>
 
-    <?php endif; ?>
+<?php endif; ?>
 
 </div>
 
+</div>
 
-                </div>
+</article>
 
-
-            </article>
-
-
-        <?php endforeach; ?>
-
+<?php endforeach; ?>
 
         </div>
 

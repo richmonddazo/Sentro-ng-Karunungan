@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../includes/bootstrap.php';
+require_once __DIR__ . '/../includes/reservation-policy.php';
 
 require_login();
 
@@ -76,6 +77,11 @@ $existingReservation = $existingStmt->fetch();
 
 $error = null;
 
+$reservationPolicy =
+    check_reservation_policy(
+        (int)$user['id'],
+        $book_id
+    );
 
 /*
 |--------------------------------------------------------------------------
@@ -87,12 +93,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     verify_csrf();
 
-    if ($existingReservation) {
+    $reservationPolicy =
+    check_reservation_policy(
+        (int)$user['id'],
+        $book_id
+    );
 
-        $error =
-            'You already have an active reservation for this book.';
+if (!$reservationPolicy['allowed']) {
 
-    } else {
+    $error =
+        $reservationPolicy['message'];
+
+} else {
 
         try {
 
@@ -587,10 +599,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
             <?php if (
-                !$existingReservation &&
-                (int)$book['available_copies'] > 0
-            ): ?>
-
+    !$existingReservation &&
+    $reservationPolicy['allowed'] &&
+    (int)$book['available_copies'] > 0
+): ?>
 
                 <form
                     method="POST"
@@ -686,6 +698,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <?php endif; ?>
 
+    <?php if (
+    !$existingReservation &&
+    !$reservationPolicy['allowed']
+): ?>
+
+    <div class="alert error">
+
+        <?= e(
+            $reservationPolicy['message']
+        ) ?>
+
+    </div>
+
+<?php endif; ?>
 
 </main>
 

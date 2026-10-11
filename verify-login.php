@@ -447,6 +447,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['name'] =
                     $account['name'];
 
+                    $_SESSION['last_activity'] =
+    time();
+
 
                 /*
                 |--------------------------------------------------------------------------
@@ -775,24 +778,100 @@ function mask_login_email(string $email): string
             "
         >
 
-            <p
-                class="muted"
-                style="
-                    margin-bottom:8px;
-                "
-            >
-                Didn't receive the code?
-            </p>
+<p
+    class="muted"
+    style="margin-bottom:12px;"
+>
+    Didn't receive the code?
+</p>
 
 
-            <span
-                class="muted"
-                style="
-                    font-size:14px;
-                "
-            >
-                We'll add Resend Login OTP next.
-            </span>
+<?php if (isset($_GET['resent'])): ?>
+
+    <div
+        style="
+            background:#e8f7f0;
+            color:#176638;
+            padding:10px;
+            border-radius:9px;
+            margin-bottom:15px;
+        "
+    >
+        A new login verification code has been sent.
+    </div>
+
+<?php endif; ?>
+
+
+<?php if (isset($_GET['resend_error'])): ?>
+
+    <div
+        style="
+            background:#fff0f0;
+            color:#992929;
+            padding:10px;
+            border-radius:9px;
+            margin-bottom:15px;
+        "
+    >
+        We could not resend your login code.
+        Please try again.
+    </div>
+
+<?php endif; ?>
+
+
+<?php if (isset($_GET['resend_wait'])): ?>
+
+    <div
+        style="
+            background:#fff7df;
+            color:#8a6500;
+            padding:10px;
+            border-radius:9px;
+            margin-bottom:15px;
+        "
+    >
+
+        Please wait
+
+        <?= (int)$_GET['resend_wait'] ?>
+
+        seconds before requesting another code.
+
+    </div>
+
+<?php endif; ?>
+
+
+<form
+    method="POST"
+    action="<?= e(
+        url('resend-login-otp.php')
+    ) ?>"
+>
+
+    <input
+        type="hidden"
+        name="csrf_token"
+        value="<?= e(csrf_token()) ?>"
+    >
+
+    <button
+        type="submit"
+        style="
+            border:none;
+            background:none;
+            color:#2454a6;
+            font-weight:700;
+            cursor:pointer;
+            font:inherit;
+        "
+    >
+        Resend Verification Code
+    </button>
+
+</form>
 
 
             <div style="margin-top:16px;">

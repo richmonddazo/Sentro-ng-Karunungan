@@ -211,6 +211,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             Books
         </a>
 
+        <a href="<?= e(url('admin/reservations.php')) ?>">
+            Reservations
+        </a>
+
+        <a href="<?= e(url('admin/users.php')) ?>">
+            Users
+        </a>
+
+        <a href="<?= e(url('admin/inventory.php')) ?>">
+    Inventory
+        </a>
+
+        <a href="<?= e(url('admin/reports.php')) ?>">
+            Reports
+        </a>
+
+        <a href="<?= e(url('admin/audit-logs.php')) ?>">
+            Activity Logs
+        </a>
         <span>
             <?= e($user['name']) ?>
         </span>

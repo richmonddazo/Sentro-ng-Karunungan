@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../includes/bootstrap.php';
+require_once __DIR__ . '/../includes/notifications.php';
 
 require_admin();
 
@@ -97,6 +98,29 @@ try {
         );
     }
 
+
+    /*
+|--------------------------------------------------------------------------
+| Get Book Title for Notification
+|--------------------------------------------------------------------------
+*/
+
+$bookStmt = $pdo->prepare("
+    SELECT title
+    FROM books
+    WHERE id = ?
+    LIMIT 1
+");
+
+$bookStmt->execute([
+    (int)$reservation['book_id']
+]);
+
+$bookTitle =
+    (string)(
+        $bookStmt->fetchColumn()
+        ?: 'your reserved book'
+    );
 
     /*
     |--------------------------------------------------------------------------
@@ -253,6 +277,26 @@ try {
         );
 
 
+        create_notification(
+    (int)$reservation['user_id'],
+    'Reservation Approved',
+    'Your reservation for "' .
+        $bookTitle .
+        '" has been approved.',
+    'reservation_approved',
+    'user/reservations.php'
+);
+
+create_notification(
+    (int)$reservation['user_id'],
+    'Reservation Rejected',
+    'Your reservation for "' .
+        $bookTitle .
+        '" was not approved. You may check your reservation history for details.',
+    'reservation_rejected',
+    'user/reservations.php'
+);
+
         $pdo->commit();
 
         redirect(
@@ -318,6 +362,15 @@ try {
             $reservation['user_name']
         );
 
+create_notification(
+    (int)$reservation['user_id'],
+    'Book Ready for Pickup',
+    '"' .
+        $bookTitle .
+        '" is now ready for pickup. Please claim the book before the pickup deadline shown in your reservations.',
+    'ready_for_pickup',
+    'user/reservations.php'
+);
 
         $pdo->commit();
 
@@ -386,6 +439,16 @@ try {
             $reservation['user_name']
         );
 
+
+create_notification(
+    (int)$reservation['user_id'],
+    'Book Borrowed',
+    '"' .
+        $bookTitle .
+        '" has been marked as borrowed. Please return it on or before the due date shown in your reservations.',
+    'book_borrowed',
+    'user/reservations.php'
+);
 
         $pdo->commit();
 
@@ -479,6 +542,15 @@ try {
             $reservation['user_name']
         );
 
+create_notification(
+    (int)$reservation['user_id'],
+    'Book Returned',
+    'Thank you. "' .
+        $bookTitle .
+        '" has been successfully marked as returned.',
+    'book_returned',
+    'user/reservations.php'
+);
 
         $pdo->commit();
 
